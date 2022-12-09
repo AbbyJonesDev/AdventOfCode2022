@@ -1,0 +1,94 @@
+# AoC 2022 - Day 2
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## Experimenting in Pieces
+
+```elixir
+# A = Rock      = X = 1
+# B = Paper     = Y = 2
+# C = Scissors  = Z = 3
+
+winning_combinations = [
+  ["A", "Y"],
+  ["B", "Z"],
+  ["C", "X"]
+]
+
+# win = 6
+# draw = both elements are the same = 3
+# lose = anything else = 0
+```
+
+```elixir
+"""
+  A Y
+  B X
+  C Z
+"""
+|> String.split("\n")
+# |> Enum.map()
+|> dbg()
+```
+
+## TDD
+
+```elixir
+defmodule DayTwo do
+  @winning_combinations [
+    ["A", "Y"],
+    ["B", "Z"],
+    ["C", "X"]
+  ]
+
+  defp format_input(raw_input) do
+    raw_input
+    |> String.split("\n", trim: true)
+  end
+
+  def win?(game) do
+    formatted = String.split(game)
+    Enum.member?(@winning_combinations, formatted)
+  end
+
+  def score_single_game(game) do
+    game
+  end
+end
+```
+
+```elixir
+ExUnit.start(auto_run: false)
+
+defmodule DayTwoTest do
+  use ExUnit.Case, async: false
+
+  @test_input """
+    A Y
+    B X
+    C Z
+  """
+
+  test "win?" do
+    assert DayTwo.win?([" A Y "])
+  end
+
+  test "day 2 - part 1" do
+    assert false == 15
+  end
+end
+
+ExUnit.run()
+```
+
+## Calculate Real Values
+
+```elixir
+real_input = File.read!("./day_2/input.txt")
+
+# TODO...
+```

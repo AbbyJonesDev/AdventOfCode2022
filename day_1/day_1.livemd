@@ -1,0 +1,129 @@
+# AoC 2022 - Day 1
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## Experimenting in Pieces
+
+```elixir
+["1000", "2000", "3000"]
+|> Enum.map(&String.to_integer(&1))
+|> Enum.sum()
+|> dbg()
+```
+
+```elixir
+input = """
+  1000
+  2000
+  3000
+
+  4000
+
+  5000
+  6000
+
+  7000
+  8000
+  9000
+
+  10000
+"""
+
+input
+|> String.split("\n")
+|> Enum.map(&String.trim(&1))
+|> Enum.chunk_by(&(&1 == ""))
+|> Enum.filter(fn elem -> elem != [""] end)
+|> Enum.map(fn elem -> Enum.map(elem, &String.to_integer(&1)) end)
+|> Enum.map(&Enum.sum(&1))
+|> Enum.max()
+|> dbg()
+```
+
+## Putting Pieces Together
+
+```elixir
+defmodule DayOne do
+  defp format_input(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&String.trim(&1))
+    |> Enum.chunk_by(&(&1 == ""))
+    |> Enum.filter(fn elem -> elem != [""] end)
+    |> Enum.map(fn elem -> Enum.map(elem, &String.to_integer(&1)) end)
+  end
+
+  defp calculate_sums(formatted_input) do
+    formatted_input
+    |> Enum.map(&Enum.sum(&1))
+  end
+
+  def calculate_max(input) do
+    format_input(input)
+    |> calculate_sums()
+    |> Enum.max()
+  end
+
+  def sum_top_three(input) do
+    input
+    |> format_input()
+    |> calculate_sums()
+    |> Enum.sort(&(&1 >= &2))
+    |> Enum.take(3)
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+ExUnit.start(auto_run: false)
+
+defmodule DayOneTest do
+  use ExUnit.Case, async: false
+
+  @test_input """
+    1000
+    2000
+    3000
+
+    4000
+
+    5000
+    6000
+
+    7000
+    8000
+    9000
+
+    10000
+  """
+
+  test "using sample input" do
+    assert DayOne.calculate_max(@test_input) == 24000
+  end
+
+  test "part 2 using sample input" do
+    assert DayOne.sum_top_three(@test_input) == 45000
+  end
+end
+
+ExUnit.run()
+```
+
+```elixir
+real_input = File.read!("./day_1/input.txt")
+
+DayOne.calculate_max(real_input)
+
+DayOne.sum_top_three(real_input)
+```
+
+## Refactor
+
+Note to self - there is certainly a more efficient way to calculate this.  You're making multiple passes over the whole data set.
+
+Feels like `reduce` should be in there to consolidate a couple of steps.
