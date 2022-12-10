@@ -63,9 +63,9 @@ defmodule DayTwo do
   # Draw scores 3
   def score_on_outcome(_), do: 3
 
-  def score_on_move({_, :rock}), do: 1
-  def score_on_move({_, :paper}), do: 2
-  def score_on_move({_, :scissors}), do: 3
+  def score_on_move(:rock), do: 1
+  def score_on_move(:paper), do: 2
+  def score_on_move(:scissors), do: 3
 
   @doc """
   Score a round based on the given rules:
@@ -79,8 +79,8 @@ defmodule DayTwo do
   Paper = 2 pts
   Scissors = 3pts
   """
-  def score_round(game) do
-    score_on_outcome(game) + score_on_move(game)
+  def score_round({_player1, player2} = game) do
+    score_on_outcome(game) + score_on_move(player2)
   end
 
   def get_tournament_score(input_file) do
@@ -106,6 +106,89 @@ DayTwo.get_tournament_score("test_input.txt")
 # |> dbg()
 ```
 
+```elixir
+defmodule DayTwoPartTwo do
+  @doc """
+  Convert list of cryptic letters to tuple of meaningful atoms
+  input: ["A", "Y"]
+
+  A - rock
+  B - paper
+  C - scissors
+
+  X means you need to lose, 
+  Y means you need to end the round in a draw, and 
+  Z means you need to win.
+
+  output: {:rock, :draw}
+  """
+  def decode_round([player1, outcome]) do
+    move_decoder = %{
+      "A" => :rock,
+      "B" => :paper,
+      "C" => :scissors
+    }
+
+    outcome_decoder = %{
+      "X" => :lose,
+      "Y" => :draw,
+      "Z" => :win
+    }
+
+    {Map.get(move_decoder, player1), Map.get(outcome_decoder, outcome)}
+  end
+
+  @doc """
+  Based on the other player's move and the outcome of the round,
+  select a move that will result in the expected outcome
+
+  input: {:rock, :draw}
+  output: :rock
+  """
+  def select_move({:rock, :draw}), do: :rock
+  def select_move({:paper, :draw}), do: :paper
+  def select_move({:scissors, :draw}), do: :scissors
+  def select_move({:rock, :win}), do: :paper
+  def select_move({:paper, :win}), do: :scissors
+  def select_move({:scissors, :win}), do: :rock
+  def select_move({:rock, :lose}), do: :scissors
+  def select_move({:paper, :lose}), do: :rock
+  def select_move({:scissors, :lose}), do: :paper
+
+  @doc """
+  Create new tuple that includes the player2 move along with the 
+  player1 move and the outcome
+  """
+  def add_player2_move({player1, outcome} = input) do
+    {player1, select_move(input), outcome}
+  end
+
+  @doc """
+  Based on the outcome, assign 0, 3, or 6 points
+  """
+  def score_on_outcome(:win), do: 6
+  def score_on_outcome(:lose), do: 0
+  def score_on_outcome(:draw), do: 3
+
+  @doc """
+  Calculate the total score based on the selected move and the outcome
+  """
+  def score_round({_player1, player2, outcome}) do
+    score_on_outcome(outcome) + DayTwo.score_on_move(player2)
+  end
+
+  def get_tournament_score(input_file) do
+    input_file
+    |> FileUtil.readlines()
+    |> Enum.map(&String.split/1)
+    |> Enum.map(&DayTwoPartTwo.decode_round/1)
+    |> Enum.map(&DayTwoPartTwo.add_player2_move/1)
+    |> Enum.map(&DayTwoPartTwo.score_round/1)
+    |> Enum.sum()
+  end
+end
+```
+
 ## TDD
 
 ```elixir
@@ -117,6 +200,10 @@ defmodule DayTwoTest do
   test "day 2 - part 1" do
     assert DayTwo.get_tournament_score("test_input.txt") == 15
   end
+
+  test "day 2 - part 2" do
+    assert DayTwoPartTwo.get_tournament_score("test_input.txt") == 12
+  end
 end
 
 ExUnit.run()
@@ -126,4 +213,6 @@ ExUnit.run()
 
 ```elixir
 DayTwo.get_tournament_score("input.txt")
+
+DayTwoPartTwo.get_tournament_score("input.txt")
 ```
