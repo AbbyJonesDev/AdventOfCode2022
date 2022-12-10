@@ -6,60 +6,107 @@ Mix.install([
 ])
 ```
 
-## Experimenting in Pieces
+## Structured Approach
+
+Things I learned from the meetup:
+
+1. Consider a util method to read in the file/lines from the input document
+2. Convert strings into something more useful as early as possible.
+3. Think about your data structures.  Lists, tuples, maps - which makes the most sense given the shape of the data?
+4. Set up your pipeline at the beginning to describe the steps you'll need to take.  Then go back and implement the steps using built-in methods or custom methods as it makes sense.
 
 ```elixir
-# A = Rock      = X = 1
-# B = Paper     = Y = 2
-# C = Scissors  = Z = 3
+defmodule FileUtil do
+  @doc """
+  Given a filename, reads in the file and returns a list of strings,
+  with each string containing one line of the file.
 
-winning_combinations = [
-  ["A", "Y"],
-  ["B", "Z"],
-  ["C", "X"]
-]
+  Assumes that the file exists in the current directory
+  """
+  def readlines(filename) do
+    File.read!("#{__DIR__}/#{filename}")
+    |> String.split("\n", trim: true)
+  end
+end
 
-# win = 6
-# draw = both elements are the same = 3
-# lose = anything else = 0
+# FileUtil.readlines('test_input.txt');
 ```
-
-```elixir
-"""
-  A Y
-  B X
-  C Z
-"""
-|> String.split("\n")
-# |> Enum.map()
-|> dbg()
-```
-
-## TDD
 
 ```elixir
 defmodule DayTwo do
-  @winning_combinations [
-    ["A", "Y"],
-    ["B", "Z"],
-    ["C", "X"]
-  ]
+  @doc """
+  Convert list of cryptic letters to tuple of meaningful atoms
+  input: ["A", "Y"]
+  output: {:rock, :rock}
+  """
+  def decode_round([player1, player2]) do
+    decoder = %{
+      "A" => :rock,
+      "B" => :paper,
+      "C" => :scissors,
+      "X" => :rock,
+      "Y" => :paper,
+      "Z" => :scissors
+    }
 
-  defp format_input(raw_input) do
-    raw_input
-    |> String.split("\n", trim: true)
+    {Map.get(decoder, player1), Map.get(decoder, player2)}
   end
 
-  def win?(game) do
-    formatted = String.split(game)
-    Enum.member?(@winning_combinations, formatted)
+  # Winning rounds score 6
+  def score_on_outcome({:rock, :paper}), do: 6
+  def score_on_outcome({:paper, :scissors}), do: 6
+  def score_on_outcome({:scissors, :rock}), do: 6
+  # Losing rounds score 0
+  def score_on_outcome({:rock, :scissors}), do: 0
+  def score_on_outcome({:paper, :rock}), do: 0
+  def score_on_outcome({:scissors, :paper}), do: 0
+  # Draw scores 3
+  def score_on_outcome(_), do: 3
+
+  def score_on_move({_, :rock}), do: 1
+  def score_on_move({_, :paper}), do: 2
+  def score_on_move({_, :scissors}), do: 3
+
+  @doc """
+  Score a round based on the given rules:
+  Winning = 6 pts
+  Tie = 3 pts
+  Lose = 0 pts
+
+  Regardless of winning or losing, points are also assigned based
+  on the move thrown:
+  Rock = 1 pt
+  Paper = 2 pts
+  Scissors = 3pts
+  """
+  def score_round(game) do
+    score_on_outcome(game) + score_on_move(game)
   end
 
-  def score_single_game(game) do
-    game
+  def get_tournament_score(input_file) do
+    input_file
+    |> FileUtil.readlines()
+    |> Enum.map(&String.split/1)
+    |> Enum.map(&DayTwo.decode_round/1)
+    |> Enum.map(&DayTwo.score_round/1)
+    |> Enum.sum()
   end
 end
+
+DayTwo.get_tournament_score("test_input.txt")
+
+# input_filename = "test_input.txt"
+
+# input_filename
+# |> FileUtil.readlines()
+# |> Enum.map(&String.split/1)
+# |> Enum.map(&DayTwo.decode_round/1)
+# |> Enum.map(&DayTwo.score_round/1)
+# |> Enum.sum()
+# |> dbg()
 ```
+
+## TDD
 
 ```elixir
 ExUnit.start(auto_run: false)
@@ -67,18 +114,8 @@ ExUnit.start(auto_run: false)
 defmodule DayTwoTest do
   use ExUnit.Case, async: false
 
-  @test_input """
-    A Y
-    B X
-    C Z
-  """
-
-  test "win?" do
-    assert DayTwo.win?([" A Y "])
-  end
-
   test "day 2 - part 1" do
-    assert false == 15
+    assert DayTwo.get_tournament_score("test_input.txt") == 15
   end
 end
 
@@ -88,7 +125,5 @@ ExUnit.run()
 ## Calculate Real Values
 
 ```elixir
-real_input = File.read!("./day_2/input.txt")
-
-# TODO...
+DayTwo.get_tournament_score("input.txt")
 ```
