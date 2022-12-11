@@ -1,0 +1,258 @@
+# Advent of Code 2022 - Day 3
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## File Util
+
+```elixir
+defmodule FileUtil do
+  @doc """
+  Given a filename, reads in the file and returns a list of strings,
+  with each string containing one line of the file.
+
+  Assumes that the file exists in the current directory
+  """
+  def readlines(filename) do
+    File.read!("#{__DIR__}/#{filename}")
+    |> String.split("\n", trim: true)
+  end
+end
+```
+
+## Notes - Rucksack Reorganization
+
+### Part one
+
+* Each rucksack has two large compartments
+* All items of a given type go into exactly one of the compartments
+* Each item type is identified by a single letter.  Upper and lowercase letters are different item types
+* Each line of the puzzle input represents 1 rucksack
+* A rucksack has the same number of items in each compartment.  i.e. - within a line of the puzzle input, the first half goes in one compartment, and the second half goes in the other compartment
+
+**Step 1 - Find the problem**
+
+In each rucksack, one item will appear in both compartments.  i.e. - one (upper or lower case) letter will appear in both the first half and the second half of the string.
+
+This is the item we need to find.
+
+**Step 2 - Determine priorities**
+
+To help prioritize item rearrangement, every item type can be converted to a priority:
+
+* Lowercase item types a through z have priorities 1 through 26.
+* Uppercase item types A through Z have priorities 27 through 52.
+
+**Step 3 - Sum up the priorities**
+
+Add up all the numbers and find the total
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Part Two
+
+* Elves are divided into groups of three.  Each set of 3 lines in the input represents one group
+* Each group has an identification badge.  That badge is the only item that all 3 elves in the group will have in common
+* The identification badge will not be carried by any elves in any other groups
+
+**Step one**
+
+For each group of elves, find which item is their identity badge - the one item type that they have in common
+
+**Step Two**
+
+Calculate the priority for each badge item type
+
+**Step Three**
+
+Sum up the priorities again
+
+## Code
+
+```elixir
+defmodule DayThree do
+  @doc """
+  Given a string representation of all the items in a rucksack,
+  return a tuple representing each compartment
+
+  ## Examples:
+
+      iex> get_compartments("vJrwpWtwJgWrhcsFMMfFFhFp")
+      {"vJrwpWtwJgWr", "hcsFMMfFFhFp"}
+  """
+  def get_compartments(rucksack) do
+    compartment_size =
+      rucksack
+      |> String.length()
+      |> div(2)
+
+    String.split_at(rucksack, compartment_size)
+  end
+
+  @doc """
+  Given strings representing the contents of each compartment, return
+  the character that is present in both compartments
+
+  ## Examples:
+
+      iex> find_problem_item({"vJrwpWtwJgWr", "hcsFMMfFFhFp"})
+      "p"
+  """
+  def find_problem_item({compartment_a, compartment_b}) do
+    compartment_a
+    |> String.split("", trim: true)
+    |> Enum.filter(fn l -> String.contains?(compartment_b, l) end)
+    |> Enum.at(0)
+  end
+
+  @doc """
+  Create ranges of the lowercase and uppercase letters using their is_integer
+  representations. Return a list of tuples mapping each letter to its value.
+  """
+  def build_value_list() do
+    uppercase_letters = ?A..?Z
+    lowercase_letters = ?a..?z
+
+    List.flatten(
+      Enum.with_index(lowercase_letters, fn el, i -> {el, i + 1} end),
+      Enum.with_index(uppercase_letters, fn el, i -> {el, i + 27} end)
+    )
+  end
+
+  @doc """
+  Use a lookup table to return the priority level of the item
+  """
+  def assign_priority(item) do
+    [char] = String.to_charlist(item)
+    value_list = build_value_list()
+    {_char, value} = List.keyfind(value_list, char, 0)
+    value
+  end
+
+  @doc """
+  Based on all the input, calculate the thing
+  """
+  def calculate_reorg_priority(input) do
+    input
+    |> FileUtil.readlines()
+    # [{"abcd", "efca"}, {"ABcD", "EFcG"}]
+    |> Enum.map(&DayThree.get_compartments/1)
+    # ["c", "c"]
+    |> Enum.map(&DayThree.find_problem_item/1)
+    # [1, 1]
+    |> Enum.map(&DayThree.assign_priority/1)
+    |> Enum.sum()
+  end
+end
+
+# "test_input.txt"
+# |> FileUtil.readlines()
+# |> Enum.map(&DayThree.get_compartments/1) # [{"abcd", "efca"}, {"ABcD", "EFcG"}]
+# |> Enum.map(&DayThree.find_problem_item/1) # ["c", "c"]
+# |> Enum.map(&DayThree.assign_priority/1) # [1, 1]
+# |> Enum.sum()
+# |> dbg()
+```
+
+```elixir
+defmodule DayThreePartTwo do
+  @doc """
+  Given two charlists, return a list of common elements
+  """
+  def find_common_chars(list1, list2) do
+    Enum.filter(list1, fn letter ->
+      String.contains?(List.to_string(list2), List.to_string([letter]))
+    end)
+  end
+
+  @doc """
+  Given a group of three elves, find the one item they have in common,
+  which must be their identity badge
+  """
+  def find_identity_badge([elf1, elf2, elf3]) do
+    find_common_chars(elf1, elf2)
+    |> find_common_chars(elf3)
+  end
+
+  @doc """
+  Use a lookup table to return the priority level of the item
+  So close to being reusable from Part 1, except that Part 1 expects a 
+  string, and I already have a codepoint in Part 2
+  """
+  def assign_priority([char]) do
+    value_list = DayThree.build_value_list()
+    {_char, value} = List.keyfind(value_list, char, 0)
+    value
+  end
+
+  @doc """
+  Based on all the input, calculate the thing
+  """
+  def calculate_reorg_priority(input) do
+    input
+    |> FileUtil.readlines()
+    # convert to codepoints
+    |> Enum.map(&String.to_charlist/1)
+    # strip duplicate values
+    |> Enum.map(&Enum.uniq/1)
+    # break up into elf groups
+    |> Enum.chunk_every(3)
+    |> Enum.map(&DayThreePartTwo.find_identity_badge/1)
+    |> Enum.map(&DayThreePartTwo.assign_priority/1)
+    |> Enum.sum()
+  end
+end
+
+"test_input.txt"
+|> FileUtil.readlines()
+# convert to codepoints
+|> Enum.map(&String.to_charlist/1)
+# strip duplicate values
+|> Enum.map(&Enum.uniq/1)
+# break up into elf groups
+|> Enum.chunk_every(3)
+|> Enum.map(&DayThreePartTwo.find_identity_badge/1)
+|> Enum.map(&DayThreePartTwo.assign_priority/1)
+|> Enum.sum()
+|> dbg()
+```
+
+## Tests
+
+```elixir
+ExUnit.start(auto_run: false)
+
+defmodule DayThreeTest do
+  use ExUnit.Case, async: false
+  #  doctest DayThree - not working yet but coming
+
+  test "day 3 - part 1" do
+    assert DayThree.calculate_reorg_priority("test_input.txt") == 157
+  end
+
+  test "day 3 - part 2" do
+    assert DayThreePartTwo.calculate_reorg_priority("test_input.txt") == 70
+  end
+end
+
+ExUnit.run()
+```
+
+## Note to Self
+
+A `charlist` is literally a list.
+
+This: `'r'` looks like a single letter, but it's actually this: `[114]`
+
+So when you pass in a charlist as an argument to a function, even though it's a list of 1 thing and it _looks_ like a regular letter, you still need to grab the head of the list in order to actually access the integer representation of the letter.
+
+## Solve the Puzzle
+
+```elixir
+DayThree.calculate_reorg_priority("input.txt")
+
+DayThreePartTwo.calculate_reorg_priority("input.txt")
+```
