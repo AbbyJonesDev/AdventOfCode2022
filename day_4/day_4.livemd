@@ -1,0 +1,152 @@
+# Advent of Code 2022 - Day 4
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## File Util
+
+```elixir
+defmodule FileUtil do
+  @doc """
+  Given a filename, reads in the file and returns a list of strings,
+  with each string containing one line of the file.
+
+  Assumes that the file exists in the current directory
+  """
+  def readlines(filename) do
+    File.read!("#{__DIR__}/#{filename}")
+    |> String.split("\n", trim: true)
+  end
+end
+```
+
+## Notes - Camp Cleanup
+
+### Part one
+
+Pairs of elves are teaming up to clean the camp.  Each elf is assigned 1 or more sections to clean, designated by an integer.
+
+Elves have been assigned duplicate sections.  Pairs want to know how much of their assigned work is duplicated.
+
+Task - find out how many pairs exist where one person's range falls completely inside the other person's range.
+
+NOTE - be sure to check both ways.
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Part Two
+
+The twist - how many pairs overlap at all?
+
+## Code
+
+```elixir
+defmodule DayFour do
+  def decode_assignments(str) do
+    str
+    |> String.split(",")
+    |> Enum.map(fn el -> String.split(el, "-") end)
+  end
+
+  def convert_assignments_to_map([[elf1_start, elf1_end], [elf2_start, elf2_end]]) do
+    %{
+      elf1_start: String.to_integer(elf1_start),
+      elf1_end: String.to_integer(elf1_end),
+      elf2_start: String.to_integer(elf2_start),
+      elf2_end: String.to_integer(elf2_end)
+    }
+  end
+
+  def fully_overlap?(%{
+        elf1_start: elf1_start,
+        elf2_start: elf2_start,
+        elf1_end: elf1_end,
+        elf2_end: elf2_end
+      }) do
+    (elf1_start <= elf2_start && elf1_end >= elf2_end) ||
+      (elf2_start <= elf1_start && elf2_end >= elf1_end)
+  end
+
+  def any_overlap?(%{
+        elf1_start: elf1_start,
+        elf2_start: elf2_start,
+        elf1_end: elf1_end,
+        elf2_end: elf2_end
+      }) do
+    elf1_range = elf1_start..elf1_end
+    elf2_range = elf2_start..elf2_end
+
+    Enum.concat(elf1_range, elf2_range)
+    |> Enum.frequencies()
+    |> Map.values()
+    |> Enum.any?(fn val -> val > 1 end)
+  end
+
+  def get_count(input) do
+    input
+    |> FileUtil.readlines()
+    |> Enum.map(&DayFour.decode_assignments/1)
+    |> Enum.map(&DayFour.convert_assignments_to_map/1)
+    |> Enum.filter(&DayFour.fully_overlap?/1)
+    |> Enum.count()
+  end
+
+  def get_any_overlap_count(input) do
+    input
+    |> FileUtil.readlines()
+    |> Enum.map(&DayFour.decode_assignments/1)
+    |> Enum.map(&DayFour.convert_assignments_to_map/1)
+    |> Enum.filter(&DayFour.any_overlap?/1)
+    |> Enum.count()
+  end
+end
+
+# "test_input.txt"
+# |> FileUtil.readlines()
+# |> Enum.map(&DayFour.decode_assignments/1)
+# |> Enum.map(&DayFour.convert_assignments_to_map/1)
+# |> Enum.filter(&DayFour.fully_overlap?/1)
+# |> Enum.count()
+# |> dbg()
+```
+
+```elixir
+# defmodule DayFourPartTwo do
+
+# end
+
+# "test_input.txt"
+# |> FileUtil.readlines()
+# |> dbg()
+```
+
+## Tests
+
+```elixir
+ExUnit.start(auto_run: false)
+
+defmodule DayFourTest do
+  use ExUnit.Case, async: false
+
+  test "day 4 - part 1" do
+    assert DayFour.get_count("test_input.txt") == 2
+  end
+
+  test "day 4 - part 2" do
+    assert DayFour.get_any_overlap_count("test_input.txt") == 4
+  end
+end
+
+ExUnit.run()
+```
+
+## Solve the Puzzle
+
+```elixir
+DayFour.get_count("input.txt")
+
+DayFour.get_any_overlap_count("input.txt")
+```
